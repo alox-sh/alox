@@ -1,0 +1,22 @@
+{
+    "version": "0.2.0",
+    "configurations": [{
+        "name": "Example - Rest API",
+        "type": "go",
+        "request": "launch",
+        "mode": "auto",
+        "program": "${workspaceFolder}/examples/restApi/main.go"
+    }, {
+        "name": "Example - SPA (FS)",
+        "type": "go",
+        "request": "launch",
+        "mode": "auto",
+        "program": "${workspaceFolder}/examples/spaDir/main.go"
+    }, {
+        "name": "Example - SPA (Embeded)",
+        "type": "go",
+        "request": "launch",
+        "mode": "auto",
+        "program": "${workspaceFolder}/examples/spaEmbeded/main.go"
+    }]
+}
