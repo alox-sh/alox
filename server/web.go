@@ -50,6 +50,8 @@ func (web *Web) WriteFile(responseWriter http.ResponseWriter, key, name string) 
 		return
 	}
 
+	// http.ServeContent(responseWriter, request, fileStat.Name(), fileStat.ModTime(), bytes.NewReader(buffer))
+
 	header := responseWriter.Header()
 	header.Set("Content-Type", http.DetectContentType(data))
 

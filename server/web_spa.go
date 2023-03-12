@@ -8,8 +8,11 @@ import (
 	"alox.sh/webpage"
 )
 
+type SPAHandler func(*SPA, http.ResponseWriter, *http.Request)
+
 type SPAParams struct {
-	RootFS         fs.FS
+	FS             fs.FS
+	FSKey          string
 	InputHTMLName  string
 	HydrateWebpage func(*SPA, http.ResponseWriter, *http.Request, *webpage.Webpage)
 }
@@ -19,7 +22,7 @@ type SPA struct {
 	SPAParams
 }
 
-func NewSPA(params SPAParams) (spa *SPA, err error) {
+func NewSPA(handler SPAHandler, params SPAParams) (spa *SPA, err error) {
 	var (
 		inputHTMLFile     fs.File
 		inputHTMLFileStat fs.FileInfo
@@ -28,17 +31,26 @@ func NewSPA(params SPAParams) (spa *SPA, err error) {
 	spa = &SPA{
 		SPAParams: params,
 		Web: NewWeb(func(_ *Web, responseWriter http.ResponseWriter, request *http.Request) {
-			spa.serve(responseWriter, request)
+			if handler == nil {
+				spa.WriteFileOrWebpage(responseWriter, request)
+				return
+			}
+
+			handler(spa, responseWriter, request)
 		}),
+	}
+
+	if len(spa.FSKey) < 1 {
+		spa.FSKey = "root"
 	}
 
 	if len(spa.InputHTMLName) < 1 {
 		spa.InputHTMLName = "index.html"
 	}
 
-	spa.FS["root"] = params.RootFS
+	spa.Web.FS[spa.FSKey] = params.FS
 
-	if inputHTMLFile, err = spa.FS["root"].Open(spa.InputHTMLName); err != nil {
+	if inputHTMLFile, err = params.FS.Open(spa.InputHTMLName); err != nil {
 		return
 	}
 
@@ -46,8 +58,8 @@ func NewSPA(params SPAParams) (spa *SPA, err error) {
 		return
 	}
 
-	if inputHTMLFileStat.IsDir() {
-		err = fmt.Errorf("Input HTML file '%s' is a directory", spa.InputHTMLName)
+	if !inputHTMLFileStat.Mode().IsRegular() {
+		err = fmt.Errorf("input HTML file '%s' is irregular file", spa.InputHTMLName)
 		return
 	}
 
@@ -58,40 +70,40 @@ func NewSPA(params SPAParams) (spa *SPA, err error) {
 	return
 }
 
-func (spa *SPA) serve(responseWriter http.ResponseWriter, request *http.Request) {
+func (spa *SPA) WriteFile(responseWriter http.ResponseWriter, request *http.Request) (err error) {
+	if spa.Web.FS[spa.FSKey] == nil {
+		return fmt.Errorf("invalid FS '%s'", spa.FSKey)
+	}
+
+	return spa.Web.WriteFile(responseWriter, spa.FSKey, request.URL.Path)
+}
+
+func (spa *SPA) MustWriteFile(responseWriter http.ResponseWriter, request *http.Request) {
+	if err := spa.WriteFile(responseWriter, request); err != nil {
+		spa.HandleError(responseWriter, request, err)
+	}
+}
+
+func (spa *SPA) WriteWebpage(responseWriter http.ResponseWriter, request *http.Request) (err error) {
 	webpage := spa.Webpage(spa.InputHTMLName)
 
-	if spa.FS["root"] == nil || webpage == nil {
-		spa.HandleError(responseWriter, request, fmt.Errorf("Invalid SPA"))
+	if webpage == nil {
+		return fmt.Errorf("invalid webpage '%s'", spa.InputHTMLName)
+	}
+
+	return spa.Web.WriteWebpage(responseWriter, request, webpage)
+}
+
+func (spa *SPA) MustWriteWebpage(responseWriter http.ResponseWriter, request *http.Request) {
+	if err := spa.WriteWebpage(responseWriter, request); err != nil {
+		spa.HandleError(responseWriter, request, err)
+	}
+}
+
+func (spa *SPA) WriteFileOrWebpage(responseWriter http.ResponseWriter, request *http.Request) {
+	if err := spa.WriteFile(responseWriter, request); err == nil {
 		return
 	}
 
-	if err := spa.WriteFile(responseWriter, "root", request.URL.Path); err == nil {
-		return
-	}
-
-	// file, err := spa.FS["root"].Open(request.URL.Path)
-	// if err == nil {
-	// 	fileStat, err := file.Stat()
-	// 	if err == nil && !fileStat.IsDir() {
-	// 		buffer, err := ioutil.ReadAll(file) // suboptimal (large files)
-	// 		if err != nil {
-	// 			spa.HandleError(responseWriter, request, err)
-	// 			return
-	// 		}
-
-	// 		// var data []byte
-	// 		// data, err = fs.ReadFile(spa.FS["root"], request.URL.Path)
-	// 		// responseWriter.Write(data)
-
-	// 		http.ServeContent(responseWriter, request, fileStat.Name(), fileStat.ModTime(), bytes.NewReader(buffer))
-	// 		return
-	// 	}
-	// }
-
-	if spa.HydrateWebpage != nil {
-		spa.HydrateWebpage(spa, responseWriter, request, webpage)
-	}
-
-	spa.WriteWebpage(responseWriter, request, webpage)
+	spa.MustWriteWebpage(responseWriter, request)
 }
