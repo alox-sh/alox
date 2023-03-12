@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+PACKAGE_NAME=alox.sh
+
 if [[ "$1" =~ ^[0-9]+(\.[0-9]+){2}$ ]]; then
     TAG_NAME="v$1"
 fi
@@ -45,4 +47,8 @@ git push origin $TAG_NAME
 
 git checkout $ORIGINAL_BRANCH
 
-echo "Released package version $TAG_NAME"
+echo "Tagged latest master as version $TAG_NAME"
+
+GOPROXY=proxy.golang.org go list -m $PACKAGE_NAME@$TAG_NAME
+
+echo "Triggered indexing of package $PACKAGE_NAME@$TAG_NAME at proxy.golang.org"
