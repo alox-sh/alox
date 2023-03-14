@@ -70,6 +70,10 @@ func NewSPA(handler SPAHandler, params SPAParams) (spa *SPA, err error) {
 	return
 }
 
+func (spa *SPA) Webpage() *webpage.Webpage {
+	return spa.Web.Webpage(spa.InputHTMLName)
+}
+
 func (spa *SPA) WriteFile(responseWriter http.ResponseWriter, request *http.Request) (err error) {
 	if spa.Web.FS[spa.FSKey] == nil {
 		return fmt.Errorf("invalid FS '%s'", spa.FSKey)
@@ -98,7 +102,7 @@ func (spa *SPA) MustWriteFile(responseWriter http.ResponseWriter, request *http.
 // spa.WriteWebpage(responseWriter, request, webpage)
 
 func (spa *SPA) WriteWebpage(responseWriter http.ResponseWriter, request *http.Request) (err error) {
-	webpage := spa.Webpage(spa.InputHTMLName)
+	webpage := spa.Webpage()
 
 	if webpage == nil {
 		return fmt.Errorf("invalid webpage '%s'", spa.InputHTMLName)
