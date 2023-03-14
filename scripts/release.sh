@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -ex
 
 PACKAGE_NAME=alox.sh
 

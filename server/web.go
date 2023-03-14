@@ -17,7 +17,11 @@ type Web struct {
 }
 
 func NewWeb(handler WebHandler) (web *Web) {
-	web = &Web{Server: NewServer()}
+	web = &Web{
+		Server:   NewServer(),
+		FS:       map[string]fs.FS{},
+		Webpages: map[string]*webpage.Webpage{},
+	}
 	return web.setHandler(handler)
 }
 

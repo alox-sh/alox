@@ -40,11 +40,11 @@ func NewSPA(handler SPAHandler, params SPAParams) (spa *SPA, err error) {
 		}),
 	}
 
-	if len(spa.FSKey) < 1 {
+	if spa.FSKey == "" {
 		spa.FSKey = "root"
 	}
 
-	if len(spa.InputHTMLName) < 1 {
+	if spa.InputHTMLName == "" {
 		spa.InputHTMLName = "index.html"
 	}
 
@@ -83,6 +83,19 @@ func (spa *SPA) MustWriteFile(responseWriter http.ResponseWriter, request *http.
 		spa.HandleError(responseWriter, request, err)
 	}
 }
+
+// webpage := spa.Webpage(spa.InputHTMLName)
+
+// if spa.FS["root"] == nil || webpage == nil {
+// 	spa.HandleError(responseWriter, request, fmt.Errorf("Invalid SPA"))
+// 	return
+// }
+
+// if spa.HydrateWebpage != nil {
+// 	spa.HydrateWebpage(spa, responseWriter, request, webpage)
+// }
+
+// spa.WriteWebpage(responseWriter, request, webpage)
 
 func (spa *SPA) WriteWebpage(responseWriter http.ResponseWriter, request *http.Request) (err error) {
 	webpage := spa.Webpage(spa.InputHTMLName)
