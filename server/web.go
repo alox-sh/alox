@@ -2,6 +2,7 @@ package server
 
 import (
 	"io/fs"
+	"mime"
 	"net/http"
 	"strings"
 
@@ -57,8 +58,14 @@ func (web *Web) WriteFile(responseWriter http.ResponseWriter, key, name string) 
 
 	// http.ServeContent(responseWriter, request, fileStat.Name(), fileStat.ModTime(), bytes.NewReader(buffer))
 
+	nameByDot := strings.Split(name, ".")
+	contentType := mime.TypeByExtension("." + nameByDot[len(nameByDot)-1])
+	if contentType == "" {
+		contentType = http.DetectContentType(data)
+	}
+
 	header := responseWriter.Header()
-	header.Set("Content-Type", http.DetectContentType(data))
+	header.Set("Content-Type", contentType)
 
 	responseWriter.Write(data)
 	return
