@@ -3,6 +3,7 @@ package server
 import (
 	"io/fs"
 	"net/http"
+	"strings"
 
 	"alox.sh"
 	"alox.sh/webpage"
@@ -49,7 +50,7 @@ func (web *Web) SetWebpage(key string, webpage *webpage.Webpage) *Web {
 func (web *Web) WriteFile(responseWriter http.ResponseWriter, key, name string) (err error) {
 	var data []byte
 
-	data, err = fs.ReadFile(web.FS[key], name)
+	data, err = fs.ReadFile(web.FS[key], strings.TrimPrefix(name, "/"))
 	if err != nil {
 		return
 	}
