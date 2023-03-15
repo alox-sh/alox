@@ -333,7 +333,7 @@ func (webpage *Webpage) injectScripts() {
 		}
 
 		if script.Head {
-			webpage.headNode.AppendChild(scriptNode)
+			webpage.headNode.InsertBefore(scriptNode, webpage.headNode.FirstChild)
 			continue
 		}
 
