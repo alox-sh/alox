@@ -21,7 +21,7 @@ type Server struct {
 }
 
 func NewServer() *Server {
-	return &Server{}
+	return &Server{contextValues: alox.ContextValues{}}
 }
 
 func (server *Server) setHandler(handler alox.Handler) *Server {
