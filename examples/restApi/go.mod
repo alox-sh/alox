@@ -1,6 +1,6 @@
 module examples/restApi
 
-go 1.18
+go 1.20
 
 replace alox.sh => ../..
 

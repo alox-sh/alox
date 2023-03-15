@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -ex
 
 PACKAGE_NAME=alox.sh
 
@@ -16,9 +16,9 @@ if [[ "$TAG_NAME" == "" ]]; then
     exit 1
 fi
 
-ORIGINAL_BRANCH=$(git symbolic-ref --short HEAD)
-git checkout master
-git pull origin master
+# ORIGINAL_BRANCH=$(git symbolic-ref --short HEAD)
+# git checkout master
+# git pull origin master
 
 go mod tidy
 
@@ -45,7 +45,7 @@ fi
 git tag $TAG_NAME
 git push origin $TAG_NAME
 
-git checkout $ORIGINAL_BRANCH
+# git checkout $ORIGINAL_BRANCH
 
 echo "Tagged latest master as version $TAG_NAME"
 

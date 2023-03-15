@@ -2,7 +2,9 @@ package server
 
 import (
 	"io/fs"
+	"mime"
 	"net/http"
+	"strings"
 
 	"alox.sh"
 	"alox.sh/webpage"
@@ -17,7 +19,11 @@ type Web struct {
 }
 
 func NewWeb(handler WebHandler) (web *Web) {
-	web = &Web{Server: NewServer()}
+	web = &Web{
+		Server:   NewServer(),
+		FS:       map[string]fs.FS{},
+		Webpages: map[string]*webpage.Webpage{},
+	}
 	return web.setHandler(handler)
 }
 
@@ -45,13 +51,21 @@ func (web *Web) SetWebpage(key string, webpage *webpage.Webpage) *Web {
 func (web *Web) WriteFile(responseWriter http.ResponseWriter, key, name string) (err error) {
 	var data []byte
 
-	data, err = fs.ReadFile(web.FS[key], name)
+	data, err = fs.ReadFile(web.FS[key], strings.TrimPrefix(name, "/"))
 	if err != nil {
 		return
 	}
 
+	// http.ServeContent(responseWriter, request, fileStat.Name(), fileStat.ModTime(), bytes.NewReader(buffer))
+
+	nameByDot := strings.Split(name, ".")
+	contentType := mime.TypeByExtension("." + nameByDot[len(nameByDot)-1])
+	if contentType == "" {
+		contentType = http.DetectContentType(data)
+	}
+
 	header := responseWriter.Header()
-	header.Set("Content-Type", http.DetectContentType(data))
+	header.Set("Content-Type", contentType)
 
 	responseWriter.Write(data)
 	return

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 
 	"alox.sh"
 	"alox.sh/webpage"
@@ -20,7 +21,7 @@ type Server struct {
 }
 
 func NewServer() *Server {
-	return &Server{}
+	return &Server{contextValues: alox.ContextValues{}}
 }
 
 func (server *Server) setHandler(handler alox.Handler) *Server {
@@ -81,7 +82,7 @@ func (server *Server) ServeHTTP(responseWriter http.ResponseWriter, request *htt
 		}
 	}
 
-	for index := len(server.middlewares) - 1; index >= 0; index += 1 {
+	for index := len(server.middlewares) - 1; index >= 0; index -= 1 {
 		handler = server.middlewares[index](handler)
 	}
 
@@ -106,12 +107,34 @@ func (server *Server) NewWeb(handler WebHandler) (web *Web) {
 	return
 }
 
-func (server *Server) NewProxy(handler ProxyHandler) (proxy *Proxy) {
-	proxy = NewProxy(handler)
+func (server *Server) NewSPA(handler SPAHandler, params SPAParams) (spa *SPA, err error) {
+	if spa, err = NewSPA(handler, params); err != nil {
+		return
+	}
 
-	proxy.SetErrorHandler(server.errorHandler)
+	spa.SetErrorHandler(server.errorHandler)
 
-	server.subServers = append(server.subServers, proxy)
+	server.subServers = append(server.subServers, spa)
+	return
+}
+
+// func (server *Server) NewProxy(handler ProxyHandler) (proxy *Proxy) {
+// 	proxy = NewProxy(handler)
+
+// 	proxy.SetErrorHandler(server.errorHandler)
+
+// 	server.subServers = append(server.subServers, proxy)
+// 	return
+// }
+
+func (server *Server) NewReverseProxy(originURL *url.URL) (reverseProxy *ReverseProxy, err error) {
+	if reverseProxy, err = NewReverseProxy(originURL); err != nil {
+		return
+	}
+
+	reverseProxy.SetErrorHandler(server.errorHandler)
+
+	server.subServers = append(server.subServers, reverseProxy)
 	return
 }
 
@@ -160,8 +183,12 @@ func (api *API) RenderAndWriteHTMLNode(responseWriter http.ResponseWriter, reque
 	}
 }
 
-func (server *Server) WriteWebpage(responseWriter http.ResponseWriter, request *http.Request, webpage *webpage.Webpage) {
-	err := webpage.WriteToResponse(responseWriter)
+func (server *Server) WriteWebpage(responseWriter http.ResponseWriter, request *http.Request, webpage *webpage.Webpage) (err error) {
+	return webpage.WriteToResponse(responseWriter)
+}
+
+func (server *Server) MustWriteWebpage(responseWriter http.ResponseWriter, request *http.Request, webpage *webpage.Webpage) {
+	err := server.WriteWebpage(responseWriter, request, webpage)
 	if err != nil {
 		server.HandleError(responseWriter, request, err)
 	}

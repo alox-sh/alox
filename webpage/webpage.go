@@ -305,7 +305,7 @@ func (webpage *Webpage) injectStyles() {
 
 		styleNode.AppendChild(&html.Node{
 			Type: html.TextNode,
-			Data: webpage.Title,
+			Data: style.Content,
 		})
 
 		webpage.headNode.AppendChild(styleNode)
@@ -328,12 +328,12 @@ func (webpage *Webpage) injectScripts() {
 		} else {
 			scriptNode.AppendChild(&html.Node{
 				Type: html.TextNode,
-				Data: webpage.Title,
+				Data: script.Content,
 			})
 		}
 
 		if script.Head {
-			webpage.headNode.AppendChild(scriptNode)
+			webpage.headNode.InsertBefore(scriptNode, webpage.headNode.FirstChild)
 			continue
 		}
 
