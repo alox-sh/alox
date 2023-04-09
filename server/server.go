@@ -1,7 +1,6 @@
 package server
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -12,25 +11,20 @@ import (
 )
 
 type Server struct {
-	contextValues alox.ContextValues
-	handler       alox.Handler
-	errorHandler  alox.ErrorHandler
-	filters       []alox.Filter
-	middlewares   []alox.Middleware
-	subServers    []alox.Server
+	handler      alox.Handler
+	errorHandler alox.ErrorHandler
+	filters      []alox.Filter
+	middlewares  []alox.Middleware
+	subServers   []alox.Server
 }
 
 func NewServer() *Server {
-	return &Server{contextValues: alox.ContextValues{}}
+	return &Server{}
 }
 
 func (server *Server) setHandler(handler alox.Handler) *Server {
 	server.handler = handler
 	return server
-}
-
-func (server *Server) ContextValues() alox.ContextValues {
-	return server.contextValues
 }
 
 func (server *Server) SetHandler(handler alox.Handler) alox.Server {
@@ -66,10 +60,6 @@ func (server *Server) Match(request *http.Request) bool {
 }
 
 func (server *Server) ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) {
-	for key, value := range server.contextValues {
-		request = request.WithContext(context.WithValue(request.Context(), key, value))
-	}
-
 	var handler alox.Handler = func(_ alox.Server, responseWriter http.ResponseWriter, request *http.Request) {
 		if server.handler != nil {
 			server.handler(server, responseWriter, request)

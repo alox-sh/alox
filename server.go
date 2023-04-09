@@ -32,7 +32,7 @@ type Server interface {
 
 	SetHandler(handler Handler) Server
 
-	ContextValues() ContextValues // map[interface{}]interface{}
+	// ContextValues() ContextValues // map[interface{}]interface{}
 	// SetContextValue(key, value interface{})
 
 	// // Context returns the base context.Context.

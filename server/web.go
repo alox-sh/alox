@@ -14,6 +14,8 @@ type WebHandler func(*Web, http.ResponseWriter, *http.Request)
 
 type Web struct {
 	*Server
+	// https://hackandsla.sh/posts/2021-11-06-serve-spa-from-go/
+	// use http.FileSystem instead?
 	FS       map[string]fs.FS
 	Webpages map[string]*webpage.Webpage
 }
