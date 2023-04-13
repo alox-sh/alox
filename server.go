@@ -31,6 +31,7 @@ type Server interface {
 	ResponseMethods
 
 	SetHandler(handler Handler) Server
+	SetErrorHandler(errorHandler ErrorHandler) Server
 
 	// ContextValues() ContextValues // map[interface{}]interface{}
 	// SetContextValue(key, value interface{})
@@ -52,4 +53,6 @@ type Server interface {
 	// the Match function will return false. Otherwise, by default,
 	// the Match function will return true.
 	Match(request *http.Request) bool
+
+	HandleError(responseWriter http.ResponseWriter, request *http.Request, err interface{})
 }
