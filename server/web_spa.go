@@ -79,7 +79,7 @@ func (spa *SPA) WriteFile(responseWriter http.ResponseWriter, request *http.Requ
 		return fmt.Errorf("invalid FS '%s'", spa.FSKey)
 	}
 
-	return spa.Web.WriteFile(responseWriter, spa.FSKey, request.URL.Path)
+	return spa.Web.WriteFile(responseWriter, request, spa.FSKey, request.URL.Path)
 }
 
 func (spa *SPA) MustWriteFile(responseWriter http.ResponseWriter, request *http.Request) {
@@ -87,19 +87,6 @@ func (spa *SPA) MustWriteFile(responseWriter http.ResponseWriter, request *http.
 		spa.HandleError(responseWriter, request, err)
 	}
 }
-
-// webpage := spa.Webpage(spa.InputHTMLName)
-
-// if spa.FS["root"] == nil || webpage == nil {
-// 	spa.HandleError(responseWriter, request, fmt.Errorf("Invalid SPA"))
-// 	return
-// }
-
-// if spa.HydrateWebpage != nil {
-// 	spa.HydrateWebpage(spa, responseWriter, request, webpage)
-// }
-
-// spa.WriteWebpage(responseWriter, request, webpage)
 
 func (spa *SPA) WriteWebpage(responseWriter http.ResponseWriter, request *http.Request) (err error) {
 	webpage := spa.Webpage()

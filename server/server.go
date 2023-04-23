@@ -174,7 +174,7 @@ func (api *API) RenderAndWriteHTMLNode(responseWriter http.ResponseWriter, reque
 }
 
 func (server *Server) WriteWebpage(responseWriter http.ResponseWriter, request *http.Request, webpage *webpage.Webpage) (err error) {
-	return webpage.WriteToResponse(responseWriter)
+	return webpage.WriteToResponse(responseWriter, request)
 }
 
 func (server *Server) MustWriteWebpage(responseWriter http.ResponseWriter, request *http.Request, webpage *webpage.Webpage) {

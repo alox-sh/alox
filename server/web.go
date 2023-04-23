@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"io/fs"
 	"mime"
 	"net/http"
@@ -50,10 +51,10 @@ func (web *Web) SetWebpage(key string, webpage *webpage.Webpage) *Web {
 	return web
 }
 
-func (web *Web) WriteFile(responseWriter http.ResponseWriter, key, name string) (err error) {
-	var data []byte
+func (web *Web) WriteFile(responseWriter http.ResponseWriter, request *http.Request, key, name string) (err error) {
+	var buffer []byte
 
-	data, err = fs.ReadFile(web.FS[key], strings.TrimPrefix(name, "/"))
+	buffer, err = fs.ReadFile(web.FS[key], strings.TrimPrefix(name, "/"))
 	if err != nil {
 		return
 	}
@@ -63,12 +64,18 @@ func (web *Web) WriteFile(responseWriter http.ResponseWriter, key, name string) 
 	nameByDot := strings.Split(name, ".")
 	contentType := mime.TypeByExtension("." + nameByDot[len(nameByDot)-1])
 	if contentType == "" {
-		contentType = http.DetectContentType(data)
+		contentType = http.DetectContentType(buffer)
 	}
 
 	header := responseWriter.Header()
+	header.Set("Content-Length", fmt.Sprintf("%d", len(buffer)))
 	header.Set("Content-Type", contentType)
 
-	responseWriter.Write(data)
+	responseWriter.WriteHeader(http.StatusOK)
+
+	if request.Method != "HEAD" {
+		_, err = responseWriter.Write(buffer)
+	}
+
 	return
 }
