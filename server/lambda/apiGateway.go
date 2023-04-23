@@ -112,3 +112,9 @@ func (apiGateway *APIGateway) SetHandler(handler APIGatewayHandler) *APIGateway 
 	apiGateway.handler = handler
 	return apiGateway
 }
+
+func (apiGateway *APIGateway) WriteJSON(responseWriter http.ResponseWriter, json []byte) {
+	// alox.WriteJSON(responseWriter, json)
+
+	
+}
