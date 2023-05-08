@@ -3,37 +3,7 @@ package alox
 import (
 	"path"
 	"strings"
-
-	"golang.org/x/net/html"
 )
-
-func findNode(node *html.Node, predicate func(node *html.Node) bool) *html.Node {
-	if node == nil {
-		return nil
-	}
-
-	if predicate(node) {
-		return node
-	}
-
-	for child := node.FirstChild; child != nil; child = child.NextSibling {
-		if foundNode := findNode(child, predicate); foundNode != nil {
-			return foundNode
-		}
-	}
-
-	return nil
-}
-
-func findElement(node *html.Node, name string) *html.Node {
-	return findNode(node, func(node *html.Node) bool {
-		if node.Type == html.ElementNode && node.Data == name {
-			return true
-		}
-
-		return false
-	})
-}
 
 func ShiftHead(value string) (head, tail string) {
 	value = path.Clean("/" + value)

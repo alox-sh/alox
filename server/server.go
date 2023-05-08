@@ -1,25 +1,52 @@
 package server
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/url"
 
+	"golang.org/x/net/html"
+
 	"alox.sh"
 	"alox.sh/webpage"
-	"golang.org/x/net/html"
 )
 
+type contextValues map[interface{}]interface{}
+
+func (contextValues contextValues) inject(request *http.Request) *http.Request {
+	requestContext := request.Context()
+
+	for key, value := range contextValues {
+		requestContext = context.WithValue(requestContext, key, value)
+	}
+
+	return request.WithContext(requestContext)
+}
+
+func (contextValues contextValues) Get(key interface{}) interface{} {
+	return contextValues[key]
+}
+
+func (contextValues contextValues) Set(key, value interface{}) {
+	contextValues[key] = value
+}
+
+func (contextValues contextValues) Del(key interface{}) {
+	delete(contextValues, key)
+}
+
 type Server struct {
-	handler      alox.Handler
-	errorHandler alox.ErrorHandler
-	filters      []alox.Filter
-	middlewares  []alox.Middleware
-	subServers   []alox.Server
+	handler       alox.Handler
+	errorHandler  alox.ErrorHandler
+	contextValues contextValues
+	filters       []alox.Filter
+	middlewares   []alox.Middleware
+	sub           []alox.Server
 }
 
 func NewServer() *Server {
-	return &Server{}
+	return &Server{contextValues: contextValues{}}
 }
 
 func (server *Server) setHandler(handler alox.Handler) *Server {
@@ -37,6 +64,10 @@ func (server *Server) SetErrorHandler(errorHandler alox.ErrorHandler) alox.Serve
 	}
 
 	return server
+}
+
+func (server *Server) ContextValues() alox.ContextValues {
+	return server.contextValues
 }
 
 func (server *Server) AddFilters(filter ...alox.Filter) alox.Server {
@@ -60,15 +91,19 @@ func (server *Server) Match(request *http.Request) bool {
 }
 
 func (server *Server) ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) {
+	request = server.contextValues.inject(request)
+
 	var handler alox.Handler = func(_ alox.Server, responseWriter http.ResponseWriter, request *http.Request) {
 		if server.handler != nil {
 			server.handler(server, responseWriter, request)
 		}
 
-		for _, subServer := range server.subServers {
-			if subServer.Match(request) {
-				go subServer.ServeHTTP(responseWriter, request)
-			}
+		for _, server := range server.sub {
+			go func(server alox.Server) {
+				if server.Match(request) {
+					server.ServeHTTP(responseWriter, request)
+				}
+			}(server)
 		}
 	}
 
@@ -84,7 +119,7 @@ func (server *Server) NewAPI(handler APIHandler) (api *API) {
 
 	api.SetErrorHandler(server.errorHandler)
 
-	server.subServers = append(server.subServers, api)
+	server.sub = append(server.sub, api)
 	return
 }
 
@@ -93,7 +128,7 @@ func (server *Server) NewWeb(handler WebHandler) (web *Web) {
 
 	web.SetErrorHandler(server.errorHandler)
 
-	server.subServers = append(server.subServers, web)
+	server.sub = append(server.sub, web)
 	return
 }
 
@@ -104,7 +139,7 @@ func (server *Server) NewSPA(handler SPAHandler, params SPAParams) (spa *SPA, er
 
 	spa.SetErrorHandler(server.errorHandler)
 
-	server.subServers = append(server.subServers, spa)
+	server.sub = append(server.sub, spa)
 	return
 }
 
@@ -124,7 +159,7 @@ func (server *Server) NewReverseProxy(originURL *url.URL) (reverseProxy *Reverse
 
 	reverseProxy.SetErrorHandler(server.errorHandler)
 
-	server.subServers = append(server.subServers, reverseProxy)
+	server.sub = append(server.sub, reverseProxy)
 	return
 }
 
@@ -133,7 +168,7 @@ func (server *Server) NewFile(handler FileHandler) (file *File) {
 
 	file.SetErrorHandler(server.errorHandler)
 
-	server.subServers = append(server.subServers, file)
+	server.sub = append(server.sub, file)
 	return
 }
 

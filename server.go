@@ -12,18 +12,10 @@ type ErrorHandler func(Server, http.ResponseWriter, *http.Request, interface{})
 
 type Middleware func(Handler) Handler
 
-type ContextValues map[interface{}]interface{}
-
-func (contextValues ContextValues) Get(key interface{}) interface{} {
-	return contextValues[key]
-}
-
-func (contextValues ContextValues) Set(key, value interface{}) {
-	contextValues[key] = value
-}
-
-func (contextValues ContextValues) Del(key interface{}) {
-	delete(contextValues, key)
+type ContextValues interface {
+	Get(key interface{}) interface{}
+	Set(key, value interface{})
+	Del(key interface{})
 }
 
 type Server interface {
@@ -33,14 +25,12 @@ type Server interface {
 	SetHandler(handler Handler) Server
 	SetErrorHandler(errorHandler ErrorHandler) Server
 
-	// ContextValues() ContextValues // map[interface{}]interface{}
-	// SetContextValue(key, value interface{})
-
 	// // Context returns the base context.Context.
 	// //
 	// // This context is propagated to all sub-servers and its
 	// Context() context.Context
 	// SetContext(context context.Context) Server
+	ContextValues() ContextValues
 
 	AddFilters(filters ...Filter) Server
 	AddMiddlewares(middlewares ...Middleware) Server
