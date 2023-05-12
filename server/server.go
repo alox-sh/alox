@@ -1,7 +1,9 @@
 package server
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -39,6 +41,7 @@ func (contextValues contextValues) Del(key interface{}) {
 type Server struct {
 	handler       alox.Handler
 	errorHandler  alox.ErrorHandler
+	onWrite       alox.OnWrite
 	contextValues contextValues
 	filters       []alox.Filter
 	middlewares   []alox.Middleware
@@ -95,15 +98,13 @@ func (server *Server) ServeHTTP(responseWriter http.ResponseWriter, request *htt
 
 	var handler alox.Handler = func(_ alox.Server, responseWriter http.ResponseWriter, request *http.Request) {
 		if server.handler != nil {
-			server.handler(server, responseWriter, request)
+			go server.handler(server, responseWriter, request)
 		}
 
-		for _, server := range server.sub {
-			go func(server alox.Server) {
-				if server.Match(request) {
-					server.ServeHTTP(responseWriter, request)
-				}
-			}(server)
+		for _, sub := range server.sub {
+			if sub.Match(request) {
+				sub.ServeHTTP(responseWriter, request)
+			}
 		}
 	}
 
@@ -182,34 +183,84 @@ func (server *Server) HandleError(responseWriter http.ResponseWriter, request *h
 	responseWriter.Write([]byte(fmt.Sprintf("Internal server error: %+v", err)))
 }
 
-func (server *Server) WriteJSON(responseWriter http.ResponseWriter, json []byte) {
-	alox.WriteJSON(responseWriter, json)
+func (server *Server) OnWrite(onWrite alox.OnWrite) {
+	server.onWrite = onWrite
 }
 
-func (server *Server) WriteHTML(responseWriter http.ResponseWriter, html []byte) {
-	alox.WriteHTML(responseWriter, html)
-}
-
-func (server *Server) WriteFile(responseWriter http.ResponseWriter, name string, data []byte) {
-	alox.WriteFile(responseWriter, name, data)
-}
-
-func (api *API) MarshalAndWriteJSON(responseWriter http.ResponseWriter, request *http.Request, value interface{}) {
-	err := alox.MarshalAndWriteJSON(responseWriter, value)
-	if err != nil {
-		api.HandleError(responseWriter, request, err)
+func (server *Server) Write(
+	responseWriter http.ResponseWriter,
+	request *http.Request,
+	contentType string,
+	contentLength int,
+	data []byte,
+) {
+	if server.onWrite != nil {
+		go server.onWrite(request, contentType, contentLength, &data)
 	}
+
+	alox.Write(responseWriter, contentType, contentLength, data)
 }
 
-func (api *API) RenderAndWriteHTMLNode(responseWriter http.ResponseWriter, request *http.Request, node *html.Node) {
-	err := alox.RenderAndWriteHTMLNode(responseWriter, node)
+func (server *Server) WriteText(responseWriter http.ResponseWriter, request *http.Request, text []byte) {
+	server.Write(responseWriter, request, "text/plain", len(text), text)
+}
+
+func (server *Server) WriteHTML(responseWriter http.ResponseWriter, request *http.Request, html []byte) {
+	server.Write(responseWriter, request, "text/html", len(html), html)
+}
+
+func (server *Server) WriteJSON(responseWriter http.ResponseWriter, request *http.Request, json []byte) {
+	server.Write(responseWriter, request, "application/json", len(json), json)
+}
+
+func (server *Server) WriteXML(responseWriter http.ResponseWriter, request *http.Request, xml []byte) {
+	server.Write(responseWriter, request, "application/xml", len(xml), xml)
+}
+
+// func (server *Server) WriteFile(responseWriter http.ResponseWriter, name string, data []byte) {
+// 	alox.WriteFile(responseWriter, name, data)
+// }
+
+func (server *Server) MarshalAndWriteJSON(responseWriter http.ResponseWriter, request *http.Request, value interface{}) {
+	data, err := json.Marshal(value)
 	if err != nil {
-		api.HandleError(responseWriter, request, err)
+		server.HandleError(responseWriter, request, err)
+		return
 	}
+
+	server.WriteJSON(responseWriter, request, data)
+}
+
+func (server *Server) RenderAndWriteHTMLNode(responseWriter http.ResponseWriter, request *http.Request, node *html.Node) {
+	buffer := &bytes.Buffer{}
+
+	if err := html.Render(buffer, node); err != nil {
+		server.HandleError(responseWriter, request, err)
+		return
+	}
+
+	server.WriteHTML(responseWriter, request, buffer.Bytes())
 }
 
 func (server *Server) WriteWebpage(responseWriter http.ResponseWriter, request *http.Request, webpage *webpage.Webpage) (err error) {
-	return webpage.WriteToResponse(responseWriter, request)
+	buffer := &bytes.Buffer{}
+
+	if err = webpage.WriteToBuffer(buffer); err != nil {
+		return
+	}
+
+	contentType := "text/html"
+	if len(webpage.Charset) > 0 {
+		contentType = fmt.Sprintf("%s; charset=%s", contentType, webpage.Charset)
+	}
+
+	responseWriter.WriteHeader(http.StatusOK)
+
+	if request.Method != "HEAD" {
+		server.Write(responseWriter, request, contentType, buffer.Len(), buffer.Bytes())
+	}
+
+	return
 }
 
 func (server *Server) MustWriteWebpage(responseWriter http.ResponseWriter, request *http.Request, webpage *webpage.Webpage) {

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"net/http"
 
 	"golang.org/x/net/html"
 )
@@ -93,39 +92,6 @@ func (webpage *Webpage) Clone() (*Webpage, error) {
 
 func (webpage *Webpage) SetRedirect(redirectURI string) {
 	webpage.redirectURI = redirectURI
-}
-
-func (webpage *Webpage) WriteToResponse(responseWriter http.ResponseWriter, request *http.Request) (err error) {
-	webpage.enrichHTML()
-
-	header := responseWriter.Header()
-
-	if len(webpage.redirectURI) > 0 {
-		header.Set("Location", webpage.redirectURI)
-		responseWriter.WriteHeader(http.StatusFound)
-		return
-	}
-
-	buffer := &bytes.Buffer{}
-	if err = html.Render(buffer, webpage.rootNode); err != nil {
-		return
-	}
-
-	contentType := "text/html"
-	if len(webpage.Charset) > 0 {
-		contentType = fmt.Sprintf("%s; charset=%s", contentType, webpage.Charset)
-	}
-
-	header.Set("Content-Length", fmt.Sprintf("%d", buffer.Len()))
-	header.Set("Content-Type", contentType)
-
-	responseWriter.WriteHeader(http.StatusOK)
-
-	if request.Method != "HEAD" {
-		_, err = responseWriter.Write(buffer.Bytes())
-	}
-
-	return
 }
 
 func (webpage *Webpage) WriteToBuffer(outputHTML *bytes.Buffer) (err error) {

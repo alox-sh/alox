@@ -1,37 +1,64 @@
 package alox
 
 import (
+	"bytes"
 	"encoding/json"
-	"mime"
+	"fmt"
 	"net/http"
-	"path/filepath"
-	"strings"
 
 	"golang.org/x/net/html"
 )
 
+type OnWrite func(request *http.Request, contentType string, contentLength int, data *[]byte)
+
 type ResponseMethods interface {
-	WriteJSON(responseWriter http.ResponseWriter, json []byte)
-	WriteHTML(responseWriter http.ResponseWriter, html []byte)
+	Write(
+		responseWriter http.ResponseWriter,
+		request *http.Request,
+		contentType string,
+		contentLength int,
+		data []byte,
+	)
+
+	WriteText(responseWriter http.ResponseWriter, request *http.Request, text []byte)
+	WriteHTML(responseWriter http.ResponseWriter, request *http.Request, html []byte)
+	WriteJSON(responseWriter http.ResponseWriter, request *http.Request, json []byte)
+	WriteXML(responseWriter http.ResponseWriter, request *http.Request, xml []byte)
+
+	OnWrite(onWrite OnWrite)
 }
 
-func WriteJSON(responseWriter http.ResponseWriter, json []byte) {
-	responseWriter.Header().Set("Content-Type", "application/json")
-	responseWriter.Write(json)
+func Write(
+	responseWriter http.ResponseWriter,
+	contentType string,
+	contentLength int,
+	data []byte,
+) {
+	responseWriter.Header().Set("Content-Type", contentType)
+	responseWriter.Header().Set("Content-Length", fmt.Sprintf("%d", contentLength))
+	responseWriter.Write(data)
+}
+
+func WriteText(responseWriter http.ResponseWriter, text []byte) {
+	Write(responseWriter, "text/plain", len(text), text)
 }
 
 func WriteHTML(responseWriter http.ResponseWriter, html []byte) {
-	responseWriter.Header().Set("Content-Type", "text/html")
-	responseWriter.Write(html)
+	Write(responseWriter, "text/html", len(html), html)
 }
 
-func WriteFile(responseWriter http.ResponseWriter, name string, data []byte) {
+func WriteJSON(responseWriter http.ResponseWriter, json []byte) {
+	Write(responseWriter, "application/json", len(json), json)
+}
+
+func WriteXML(responseWriter http.ResponseWriter, xml []byte) {
+	Write(responseWriter, "application/xml", len(xml), xml)
+}
+
+func WriteFile(responseWriter http.ResponseWriter, contentType string, data []byte) {
 	header := responseWriter.Header()
-
-	nameParts := strings.Split(name, ".")
-	header.Set("Content-Type", mime.TypeByExtension("."+nameParts[len(nameParts)-1]))
-
-	header.Set("Content-Type", mime.TypeByExtension(filepath.Ext(name)))
+	header.Set("Content-Type", contentType)
+	header.Set("Content-Length", fmt.Sprintf("%d", len(data)))
 
 	responseWriter.Write(data)
 }
@@ -48,6 +75,16 @@ func MarshalAndWriteJSON(responseWriter http.ResponseWriter, value interface{}) 
 }
 
 func RenderAndWriteHTMLNode(responseWriter http.ResponseWriter, node *html.Node) (err error) {
-	responseWriter.Header().Set("Content-Type", "text/html")
-	return html.Render(responseWriter, node)
+	buffer := &bytes.Buffer{}
+
+	if err = html.Render(buffer, node); err != nil {
+		return
+	}
+
+	header := responseWriter.Header()
+	header.Set("Content-Type", "text/html")
+	header.Set("Content-Length", fmt.Sprintf("%d", buffer.Len()))
+
+	_, err = responseWriter.Write(buffer.Bytes())
+	return
 }
