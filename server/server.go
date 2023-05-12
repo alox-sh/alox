@@ -103,7 +103,7 @@ func (server *Server) ServeHTTP(responseWriter http.ResponseWriter, request *htt
 
 	var handler alox.Handler = func(_ alox.Server, responseWriter http.ResponseWriter, request *http.Request) {
 		if server.handler != nil {
-			go server.handler(server, responseWriter, request)
+			server.handler(server, responseWriter, request)
 		}
 
 		for _, sub := range server.sub {
