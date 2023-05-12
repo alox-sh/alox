@@ -83,6 +83,11 @@ func (server *Server) AddMiddlewares(middlewares ...alox.Middleware) alox.Server
 	return server
 }
 
+func (server *Server) Sub(sub alox.Server) alox.Server {
+	server.sub = append(server.sub, sub)
+	return server
+}
+
 func (server *Server) Match(request *http.Request) bool {
 	for _, filter := range server.filters {
 		if !filter(request) {

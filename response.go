@@ -9,25 +9,6 @@ import (
 	"golang.org/x/net/html"
 )
 
-type OnWrite func(request *http.Request, contentType string, contentLength int, data *[]byte)
-
-type ResponseMethods interface {
-	Write(
-		responseWriter http.ResponseWriter,
-		request *http.Request,
-		contentType string,
-		contentLength int,
-		data []byte,
-	)
-
-	WriteText(responseWriter http.ResponseWriter, request *http.Request, text []byte)
-	WriteHTML(responseWriter http.ResponseWriter, request *http.Request, html []byte)
-	WriteJSON(responseWriter http.ResponseWriter, request *http.Request, json []byte)
-	WriteXML(responseWriter http.ResponseWriter, request *http.Request, xml []byte)
-
-	OnWrite(onWrite OnWrite)
-}
-
 func Write(
 	responseWriter http.ResponseWriter,
 	contentType string,
