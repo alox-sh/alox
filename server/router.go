@@ -8,9 +8,9 @@ type Router struct {
 	*Server
 }
 
-func NewRouter() (api *API) {
-	api = &API{Server: NewServer()}
-	api.Server.setHandler(nil)
+func NewRouter() (router *Router) {
+	router = &Router{Server: NewServer()}
+	router.Server.setHandler(nil)
 	return
 }
 
