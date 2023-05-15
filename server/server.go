@@ -129,12 +129,14 @@ func (server *Server) ServeHTTP(responseWriter http.ResponseWriter, request *htt
 			}(sub, responseWriter, request, done)
 		}
 
-		select {
-		case <-done:
-			doneCount += 1
+		for {
+			select {
+			case <-done:
+				doneCount += 1
 
-			if doneCount >= count {
-				return
+				if doneCount >= count {
+					return
+				}
 			}
 		}
 	}

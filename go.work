@@ -3,6 +3,7 @@ go 1.18
 use (
 	.
 	./examples/restApi
+	./examples/router
 	./examples/serverSimple
 	./examples/spaDir
 	./examples/spaEmbeded
