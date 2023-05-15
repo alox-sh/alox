@@ -102,13 +102,39 @@ func (server *Server) ServeHTTP(responseWriter http.ResponseWriter, request *htt
 	request = server.contextValues.inject(request)
 
 	var handler alox.Handler = func(_ alox.Server, responseWriter http.ResponseWriter, request *http.Request) {
+		var (
+			count     = 0
+			doneCount = 0
+			done      = make(chan bool)
+		)
+
 		if server.handler != nil {
-			server.handler(server, responseWriter, request)
+			count += 1
+
+			go func(server *Server, responseWriter http.ResponseWriter, request *http.Request, done chan bool) {
+				server.handler(server, responseWriter, request)
+				done <- true
+			}(server, responseWriter, request, done)
 		}
 
 		for _, sub := range server.sub {
-			if sub.Match(request) {
-				sub.ServeHTTP(responseWriter, request)
+			count += 1
+
+			go func(sub alox.Server, responseWriter http.ResponseWriter, request *http.Request, done chan bool) {
+				if sub.Match(request) {
+					sub.ServeHTTP(responseWriter, request)
+				}
+
+				done <- true
+			}(sub, responseWriter, request, done)
+		}
+
+		select {
+		case <-done:
+			doneCount += 1
+
+			if doneCount >= count {
+				return
 			}
 		}
 	}
